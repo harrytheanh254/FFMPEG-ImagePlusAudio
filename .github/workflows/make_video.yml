@@ -22,9 +22,12 @@ jobs:
 
       - name: Tai file audio tu Link ngoai (neu co)
         run: |
-          if [ -n "${{ github.event.inputs.audio_url }}" ]; then
-            echo "Dang tai file audio tu link ngoai..."
-            wget -O audio_downloaded.mp3 "${{ github.event.inputs.audio_url }}"
+          # Làm sạch link (xóa khoảng trắng thừa)
+          CLEAN_URL=$(echo "${{ github.event.inputs.audio_url }}" | xargs)
+          
+          if [ -n "$CLEAN_URL" ]; then
+            echo "Dang tai file audio tu link: $CLEAN_URL"
+            wget --no-check-certificate -O audio_downloaded.mp3 "$CLEAN_URL"
           fi
 
       - name: Tu dong tim file va Ghep video
@@ -32,7 +35,7 @@ jobs:
           # 1. Tìm file ảnh trong Repo
           IMAGE=$(find . -maxdepth 1 -type f \( -iname "*.jpg" -o -iname "*.jpeg" -o -iname "*.png" \) | head -n 1)
           
-          # 2. Tìm file audio (ưu tiên file vừa tải từ link ngoài, nếu không có thì tìm trong Repo)
+          # 2. Tìm file audio
           if [ -f "audio_downloaded.mp3" ]; then
             AUDIO="audio_downloaded.mp3"
           else
