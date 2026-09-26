@@ -1,42 +1,35 @@
-name: Ghep Anh Va Audio Thành Video MP4
+name: Ghep Anh Va Audio Thanh Video
 
 on:
   workflow_dispatch:
     inputs:
-      image_name:
-        description: 'Tên file ảnh/video nền (VD: anh.jpg)'
+      image_file:
+        description: 'Ten file anh trong Repo (VD: image.jpg)'
         required: true
-        default: 'anh.jpg'
-      audio_name:
-        description: 'Tên file âm thanh (VD: voice.mp3)'
+        default: 'Lyme-Town-Hall-Offices-cropped-1024.jpeg'
+      audio_file:
+        description: 'Ten file am thanh trong Repo (VD: audio.mp3)'
         required: true
-        default: 'voice.mp3'
+        default: 'audio.mp3'
 
 jobs:
-  build-video:
+  create-video:
     runs-on: ubuntu-latest
     steps:
-      - name: Lấy mã nguồn từ Repo
+      - name: Lay ma nguon Repo
         uses: actions/checkout@v4
 
-      - name: Cài đặt FFmpeg
+      - name: Cai dat ffmpeg
         run: |
           sudo apt-get update
           sudo apt-get install -y ffmpeg
 
-      - name: Ghép Ảnh + Audio thành Video
+      - name: Ghep anh va audio thanh video MP4
         run: |
-          IMAGE="${{ github.event.inputs.image_name }}"
-          AUDIO="${{ github.event.inputs.audio_name }}"
-          
-          if [[ "$IMAGE" =~ \.(jpg|jpeg|png|webp)$ ]]; then
-            ffmpeg -loop 1 -i "$IMAGE" -i "$AUDIO" -c:v libx264 -tune stillimage -c:a aac -b:a 192k -pix_fmt yuv420p -shortest output_video.mp4 -y
-          else
-            ffmpeg -stream_loop -1 -i "$IMAGE" -i "$AUDIO" -map 0:v:0 -map 1:a:0 -c:v copy -c:a aac -b:a 192k -shortest output_video.mp4 -y
-          fi
+          ffmpeg -loop 1 -i "${{ github.event.inputs.image_file }}" -i "${{ github.event.inputs.audio_file }}" -c:v libx264 -tune stillimage -c:a aac -b:a 192k -pix_fmt yuv420p -shortest output_video.mp4 -y
 
-      - name: Xuất file Video thành phẩm
+      - name: Tai video thanh pham ve máy
         uses: actions/upload-artifact@v4
         with:
-          name: file-video-da-ghep
+          name: video-thanh-pham
           path: output_video.mp4
