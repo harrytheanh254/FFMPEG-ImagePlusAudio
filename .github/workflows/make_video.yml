@@ -22,9 +22,7 @@ jobs:
 
       - name: Tai file audio tu Link ngoai (neu co)
         run: |
-          # Làm sạch link (xóa khoảng trắng thừa)
           CLEAN_URL=$(echo "${{ github.event.inputs.audio_url }}" | xargs)
-          
           if [ -n "$CLEAN_URL" ]; then
             echo "Dang tai file audio tu link: $CLEAN_URL"
             wget --no-check-certificate -O audio_downloaded.mp3 "$CLEAN_URL"
@@ -50,8 +48,8 @@ jobs:
             exit 1
           fi
 
-          # 3. Ghép thành video
-          ffmpeg -loop 1 -i "$IMAGE" -i "$AUDIO" -c:v libx264 -tune stillimage -c:a aac -b:a 192k -pix_fmt yuv420p -shortest output_video.mp4 -y
+          # 3. Ghép thành video (Đã thêm scale=trunc(iw/2)*2:trunc(ih/2)*2 để tự làm tròn kích thước ảnh)
+          ffmpeg -loop 1 -i "$IMAGE" -i "$AUDIO" -c:v libx264 -tune stillimage -c:a aac -b:a 192k -vf "scale=trunc(iw/2)*2:trunc(ih/2)*2" -pix_fmt yuv420p -shortest output_video.mp4 -y
 
       - name: Tai video thanh pham ve may
         uses: actions/upload-artifact@v4
