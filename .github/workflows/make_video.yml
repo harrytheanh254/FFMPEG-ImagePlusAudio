@@ -1,16 +1,7 @@
-name: Ghep Anh Va Audio Thanh Video
+name: Ghep Anh Va Audio Thanh Video Auto
 
 on:
   workflow_dispatch:
-    inputs:
-      image_file:
-        description: 'Ten file anh trong Repo (VD: image.jpg)'
-        required: true
-        default: 'Lyme-Town-Hall-Offices-cropped-1024.jpeg'
-      audio_file:
-        description: 'Ten file am thanh trong Repo (VD: audio.mp3)'
-        required: true
-        default: 'audio.mp3'
 
 jobs:
   create-video:
@@ -24,9 +15,24 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y ffmpeg
 
-      - name: Ghep anh va audio thanh video MP4
+      - name: Tu dong tim file va Ghep video
         run: |
-          ffmpeg -loop 1 -i "${{ github.event.inputs.image_file }}" -i "${{ github.event.inputs.audio_file }}" -c:v libx264 -tune stillimage -c:a aac -b:a 192k -pix_fmt yuv420p -shortest output_video.mp4 -y
+          # 1. Tự động tìm file ảnh đầu tiên (jpg, jpeg, png)
+          IMAGE=$(find . -maxdepth 1 -type f \( -iname "*.jpg" -o -iname "*.jpeg" -o -iname "*.png" \) | head -n 1)
+          
+          # 2. Tự động tìm file audio đầu tiên (mp3, wav, m4a, aac)
+          AUDIO=$(find . -maxdepth 1 -type f \( -iname "*.mp3" -o -iname "*.wav" -o -iname "*.m4a" -o -iname "*.aac" \) | head -n 1)
+
+          echo "File anh tim thay: $IMAGE"
+          echo "File audio tim thay: $AUDIO"
+
+          if [ -z "$IMAGE" ] || [ -z "$AUDIO" ]; then
+            echo "Loi: Khong tim thấy file anh va/hoac audio trong Repo!"
+            exit 1
+          fi
+
+          # 3. Ghép thành video
+          ffmpeg -loop 1 -i "$IMAGE" -i "$AUDIO" -c:v libx264 -tune stillimage -c:a aac -b:a 192k -pix_fmt yuv420p -shortest output_video.mp4 -y
 
       - name: Tai video thanh pham ve máy
         uses: actions/upload-artifact@v4
