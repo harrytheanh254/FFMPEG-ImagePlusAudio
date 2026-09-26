@@ -2,6 +2,11 @@ name: Ghep Anh Va Audio Thanh Video Auto
 
 on:
   workflow_dispatch:
+    inputs:
+      audio_url:
+        description: 'Link tải file audio (neu file lớn hon 25MB)'
+        required: false
+        default: ''
 
 jobs:
   create-video:
@@ -10,31 +15,42 @@ jobs:
       - name: Lay ma nguon Repo
         uses: actions/checkout@v4
 
-      - name: Cai dat ffmpeg
+      - name: Cai dat ffmpeg va wget
         run: |
           sudo apt-get update
-          sudo apt-get install -y ffmpeg
+          sudo apt-get install -y ffmpeg wget
+
+      - name: Tai file audio tu Link ngoai (neu co)
+        run: |
+          if [ -n "${{ github.event.inputs.audio_url }}" ]; then
+            echo "Dang tai file audio tu link ngoai..."
+            wget -O audio_downloaded.mp3 "${{ github.event.inputs.audio_url }}"
+          fi
 
       - name: Tu dong tim file va Ghep video
         run: |
-          # 1. Tự động tìm file ảnh đầu tiên (jpg, jpeg, png)
+          # 1. Tìm file ảnh trong Repo
           IMAGE=$(find . -maxdepth 1 -type f \( -iname "*.jpg" -o -iname "*.jpeg" -o -iname "*.png" \) | head -n 1)
           
-          # 2. Tự động tìm file audio đầu tiên (mp3, wav, m4a, aac)
-          AUDIO=$(find . -maxdepth 1 -type f \( -iname "*.mp3" -o -iname "*.wav" -o -iname "*.m4a" -o -iname "*.aac" \) | head -n 1)
+          # 2. Tìm file audio (ưu tiên file vừa tải từ link ngoài, nếu không có thì tìm trong Repo)
+          if [ -f "audio_downloaded.mp3" ]; then
+            AUDIO="audio_downloaded.mp3"
+          else
+            AUDIO=$(find . -maxdepth 1 -type f \( -iname "*.mp3" -o -iname "*.wav" -o -iname "*.m4a" -o -iname "*.aac" \) | head -n 1)
+          fi
 
-          echo "File anh tim thay: $IMAGE"
-          echo "File audio tim thay: $AUDIO"
+          echo "File anh dung: $IMAGE"
+          echo "File audio dung: $AUDIO"
 
           if [ -z "$IMAGE" ] || [ -z "$AUDIO" ]; then
-            echo "Loi: Khong tim thấy file anh va/hoac audio trong Repo!"
+            echo "Loi: Khong tim thay file anh va/hoac audio!"
             exit 1
           fi
 
           # 3. Ghép thành video
           ffmpeg -loop 1 -i "$IMAGE" -i "$AUDIO" -c:v libx264 -tune stillimage -c:a aac -b:a 192k -pix_fmt yuv420p -shortest output_video.mp4 -y
 
-      - name: Tai video thanh pham ve máy
+      - name: Tai video thanh pham ve may
         uses: actions/upload-artifact@v4
         with:
           name: video-thanh-pham
