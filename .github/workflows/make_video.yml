@@ -4,44 +4,35 @@ on:
   workflow_dispatch:
     inputs:
       audio_url:
-        description: 'Link tải file audio (nếu file lớn hơn 25MB)'
+        description: 'Link tải file audio (neu file lớn hon 25MB)'
         required: false
         default: ''
-      resolution:
-        description: 'Chọn độ phân giải video'
-        required: true
-        default: '720p'
-        type: choice
-        options:
-          - '360p'
-          - '480p'
-          - '720p'
-          - '1080p'
 
 jobs:
   create-video:
     runs-on: ubuntu-latest
     steps:
-      - name: Lấy mã nguồn Repo
+      - name: Lay ma nguon Repo
         uses: actions/checkout@v4
 
-      - name: Cài đặt ffmpeg và wget
+      - name: Cai dat ffmpeg va wget
         run: |
           sudo apt-get update
           sudo apt-get install -y ffmpeg wget
 
-      - name: Tải file audio từ Link ngoài (nếu có)
+      - name: Tai file audio tu Link ngoai (neu co)
         run: |
+          # Làm sạch link (xóa khoảng trắng thừa)
           CLEAN_URL=$(echo "${{ github.event.inputs.audio_url }}" | xargs)
+          
           if [ -n "$CLEAN_URL" ]; then
-            echo "Đang tải file audio từ link: $CLEAN_URL"
+            echo "Dang tai file audio tu link: $CLEAN_URL"
             wget --no-check-certificate -O audio_downloaded.mp3 "$CLEAN_URL"
           fi
 
-      - name: Tự động tìm file và Tối ưu độ phân giải
-        id: prep
+      - name: Tu dong tim file va Ghep video
         run: |
-          # 1. Tìm file ảnh
+          # 1. Tìm file ảnh trong Repo
           IMAGE=$(find . -maxdepth 1 -type f \( -iname "*.jpg" -o -iname "*.jpeg" -o -iname "*.png" \) | head -n 1)
           
           # 2. Tìm file audio
@@ -51,32 +42,18 @@ jobs:
             AUDIO=$(find . -maxdepth 1 -type f \( -iname "*.mp3" -o -iname "*.wav" -o -iname "*.m4a" -o -iname "*.aac" \) | head -n 1)
           fi
 
+          echo "File anh dung: $IMAGE"
+          echo "File audio dung: $AUDIO"
+
           if [ -z "$IMAGE" ] || [ -z "$AUDIO" ]; then
-            echo "Lỗi: Không tìm thấy file ảnh và/hoặc audio!"
+            echo "Loi: Khong tim thay file anh va/hoac audio!"
             exit 1
           fi
 
-          # 3. Cấu hình độ phân giải theo lựa chọn
-          RES="${{ github.event.inputs.resolution }}"
-          if [ "$RES" == "360p" ]; then
-            SCALE="scale=-2:360"
-          elif [ "$RES" == "480p" ]; then
-            SCALE="scale=-2:480"
-          elif [ "$RES" == "720p" ]; then
-            SCALE="scale=-2:720"
-          elif [ "$RES" == "1080p" ]; then
-            SCALE="scale=-2:1080"
-          fi
+          # 3. Ghép thành video
+          ffmpeg -loop 1 -i "$IMAGE" -i "$AUDIO" -c:v libx264 -tune stillimage -c:a aac -b:a 192k -pix_fmt yuv420p -shortest output_video.mp4 -y
 
-          echo "IMAGE=$IMAGE" >> $GITHUB_ENV
-          echo "AUDIO=$AUDIO" >> $GITHUB_ENV
-          echo "SCALE=$SCALE" >> $GITHUB_ENV
-
-      - name: Ghép thành video
-        run: |
-          ffmpeg -loop 1 -i "$IMAGE" -i "$AUDIO" -c:v libx264 -tune stillimage -c:a aac -b:a 192k -vf "$SCALE" -pix_fmt yuv420p -shortest output_video.mp4 -y
-
-      - name: Tải video thành phẩm về máy
+      - name: Tai video thanh pham ve may
         uses: actions/upload-artifact@v4
         with:
           name: video-thanh-pham
